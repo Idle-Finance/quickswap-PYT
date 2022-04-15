@@ -1,4 +1,5 @@
 import { formatUnits } from "@ethersproject/units"
+import { LedgerSigner } from "@ethersproject/hardware-wallets";
 import dotenv from "dotenv"
 import ethers from 'ethers'
 import chalk from 'chalk'
@@ -20,7 +21,10 @@ if (!validConfig) {
 }
 
 const provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL)
-const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider)
+// hot wallet or fallback to ledger
+const wallet = process.env.PRIVATE_KEY ?
+  new ethers.Wallet(process.env.PRIVATE_KEY, provider) :
+  new LedgerSigner(provider, undefined, "m/44'/60'/0'/0/0");
 
 const ask = async (question) => {
   const rl = readline.createInterface({
@@ -35,6 +39,7 @@ const ask = async (question) => {
     });
   });
 };
+
 const deployContract = async ({
   name,
   deployer,
@@ -58,14 +63,8 @@ const deployContract = async ({
   }
 
   const displayArgs = factory.interface.deploy.inputs
-    .map((x, i) => {
-      return {
-        [x.name]: args[i],
-      };
-    })
-    .reduce((acc, x) => {
-      return { ...acc, ...x };
-    }, {});
+    .map((x, i) => ({ [x.name]: args[i] }))
+    .reduce((acc, x) => ({ ...acc, ...x }), {});
 
   console.log(chalk.yellow(`Deploy ${name} with the following args: `));
   console.log(chalk.yellow(JSON.stringify(displayArgs, null, 4)));

@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@ethersproject/hardware-wallets": "^5.6.0",
     "chalk": "^5.0.1",
     "dotenv": "^16.0.0",
     "ethers": "^5.6.1",
@@ -12,7 +13,9 @@
     "prettier": "yarn prettier:check --write",
     "prettier:check": "prettier --check \"src/**/*.sol\"",
     "solhint": "yarn solhint:check --fix",
-    "solhint:check": "solhint --config ./.solhint.json \"src/**/*.sol\""
+    "solhint:check": "solhint --config ./.solhint.json \"src/**/*.sol\"",
+    "deploy": "node --experimental-json-modules scripts/deploy.js",
+    "deploy-fork": "export RPC_URL=http://127.0.0.1:8545 && node --experimental-json-modules scripts/deploy.js"
   },
   "type": "module",
   "devDependencies": {
