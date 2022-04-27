@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.13;
 
-import {stdCheats} from "forge-std/stdlib.sol";
+import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
-import "ds-test/test.sol";
+import "forge-std/console2.sol";
 
-contract BaseTest is DSTest, stdCheats {
-  /// @dev Use forge-std Vm logic
-  Vm public constant vm = Vm(HEVM_ADDRESS);
+contract BaseTest is Test {
 }

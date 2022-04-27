@@ -13,15 +13,27 @@ with some minor modifications/additions to the solidity side such as `BaseTest.s
 
 Building and testing
 ```bash
+forge install
 forge build
 forge test
+```
 
-# forking from existing state
+Other useful commands:
+
+- forking from existing state
+```bash
 # -vvv = very very verbose
-# forge test -f http://127.0.0.1:8545 -vvv
+forge test -f http://127.0.0.1:8545 -vvv
+```
 
-# To access the debugger
-# forge run --debug src/test/Contract.t.sol --sig "testExample()"
+- access the debugger
+```bash
+forge run --debug src/test/Contract.t.sol --sig "testExample()"
+```
+
+- run test on a single contract
+```bash
+forge test --match-contract Test3
 ```
 
 ## Contract Deployment
