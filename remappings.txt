@@ -4,3 +4,4 @@ forge-std/=lib/forge-std/src/
 idle-tranches/contracts/=lib/idle-tranches/contracts/
 ds-test/=lib/ds-test/src/
 clones-with-immutable-args/=lib/clones-with-immutable-args/src/
+@uniswap/v2-periphery/contracts/=lib/v2-periphery/contracts/
