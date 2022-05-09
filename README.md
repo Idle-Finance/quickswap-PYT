@@ -47,3 +47,7 @@ node --experimental-json-modules scripts/deploy.js
 ## Etherscan Verification
 
 Check here https://github.com/libevm/forge-example#etherscan-verification
+
+## Docs
+
+[Idle Finance docs](https://docs.idle.finance/developers/)

@@ -16,3 +16,6 @@
 [submodule "lib/idle-tranches"]
 	path = lib/idle-tranches
 	url = https://github.com/Idle-Labs/idle-tranches
+[submodule "lib/v2-periphery"]
+	path = lib/v2-periphery
+	url = https://github.com/Uniswap/v2-periphery
