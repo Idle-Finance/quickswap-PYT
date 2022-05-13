@@ -32,10 +32,9 @@ contract CelsiusxStrategy is
   uint256 public constant YEAR = 365 days;
 
   address private constant QUICK = 0x831753DD7087CaC61aB5644b308642cc1c33Dc13;
-  address private constant WBTC = 0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6;
+  address private constant DQUICK = 0xf28164A485B0B2C90639E47b0f377b4a438a16B1;
   address private constant WMATIC = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270;
   address private constant WETH = 0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619;
-  address private constant CXETH = 0xfe4546feFe124F30788c4Cc1BB9AA6907A7987F9;
 
   /// ###### Storage V1
   /// @notice address of the strategy used, in this case staked token
@@ -112,10 +111,16 @@ contract CelsiusxStrategy is
     address _stakingRewards,
     address _router
   ) public initializer {
-    // if (token != address(0)) revert CelsiusxStrategy_ReInitialized();
+    if (token != address(0)) revert CelsiusxStrategy_ReInitialized();
     // Initialize contracts
     OwnableUpgradeable.__Ownable_init();
     ReentrancyGuardUpgradeable.__ReentrancyGuard_init();
+    ERC20Upgradeable.__ERC20_init(
+      "Idle Celsiusx Strategy Token",
+      string(
+        abi.encodePacked("idleCS", IERC20Metadata(_underlyingToken).symbol())
+      )
+    );
     // Set basic parameters
     strategyToken = _strategyToken;
     token = _underlyingToken;
@@ -180,12 +185,12 @@ contract CelsiusxStrategy is
   }
 
   /// @notice redeem the rewards. Claims all possible rewards
-  function redeemRewards(bool claim)
+  function redeemRewards()
     external
     onlyOwner
     returns (uint256[] memory balances)
   {
-    balances = _redeemRewards(0, 0, 0, claim);
+    balances = _redeemRewards(0, 0, 0);
   }
 
   /// @notice redeem the rewards. Claims reward as per the _extraData
@@ -199,32 +204,27 @@ contract CelsiusxStrategy is
     (
       uint256 amountOutMin,
       uint256 amountBaseTokenMin,
-      uint256 amountCxTokenMin,
-      bool claim
-    ) = abi.decode(extraData, (uint256, uint256, uint256, bool));
+      uint256 amountCxTokenMin
+    ) = abi.decode(extraData, (uint256, uint256, uint256));
 
     balances = _redeemRewards(
       amountOutMin,
       amountBaseTokenMin,
-      amountCxTokenMin,
-      claim
+      amountCxTokenMin
     );
   }
 
   function _redeemRewards(
     uint256 amountOutMin,
     uint256 amountBaseTokenMin,
-    uint256 amountCxTokenMin,
-    bool claim
+    uint256 amountCxTokenMin
   ) internal returns (uint256[] memory balances) {
     IUniswapV2Router02 _router = quickRouter;
     address _baseToken = baseToken;
     address _cxToken = cxToken;
 
     // claim rewards
-    if (claim) {
-      stakingRewards.getReward();
-    }
+    stakingRewards.getReward();
 
     // avold stack too deep error
     {
@@ -258,12 +258,14 @@ contract CelsiusxStrategy is
     latestHarvestBlock = block.number;
     totalLpTokensLocked = mintedLpTokens;
 
-    balances = new uint256[](2); // [minted Lp tokens, Quick rewards]
-    balances[0] = mintedLpTokens;
-    balances[1] = IERC20(QUICK).balanceOf(address(this));
+    balances = new uint256[](4);
+    balances[0] = amountBaseToken;
+    balances[1] = amountCxToken;
+    balances[2] = mintedLpTokens;
+    balances[3] = IERC20(DQUICK).balanceOf(address(this));
 
-    // send Quick rewards to msg.sender
-    IERC20(QUICK).safeTransfer(msg.sender, balances[0]);
+    // send DQuick rewards to msg.sender
+    IERC20(DQUICK).safeTransfer(msg.sender, balances[0]);
   }
 
   /// @dev msg.sender should approve this contract first
@@ -308,19 +310,12 @@ contract CelsiusxStrategy is
     uint256 lptStaked = stakingRewards.balanceOf(address(this));
     // uint256 lptStaked = totalLpTokensStaked;
     uint256 _lastIndexAmount = lastIndexAmount;
-
-    // console2.log("lptStaked :>>", lptStaked);
-    // console2.log("_lastIndexAmount :>>", _lastIndexAmount);
-    // console2.log("block.timestamp :>>", block.timestamp);
-    // console2.log("lastIndexedTimee :>>", lastIndexedTime);
-
     if (_lastIndexAmount != 0) {
       uint256 gainPerc = ((lptStaked - _lastIndexAmount) * 10**20) / _lastIndexAmount; // prettier-ignore
       lastApr = (YEAR / (block.timestamp - lastIndexedTime)) * gainPerc;
     }
     lastIndexedTime = block.timestamp;
     lastIndexAmount = uint256(int256(lptStaked) + _amount);
-    // console2.log("lastIndexAmount :>>", lastIndexAmount);
   }
 
   /// @notice Function to swap tokens on uniswapV2-fork DEX
@@ -358,7 +353,7 @@ contract CelsiusxStrategy is
       path[0] = tokenIn;
       path[1] = WETH;
       path[2] = tokenOut;
-    } else if (tokenIn == WETH) {
+    } else {
       path = new address[](2);
       path[0] = tokenIn;
       path[1] = tokenOut;
@@ -406,7 +401,7 @@ contract CelsiusxStrategy is
     returns (address[] memory tokens)
   {
     tokens = new address[](1);
-    tokens[0] = QUICK;
+    tokens[0] = DQUICK;
   }
 
   // ###################
@@ -434,6 +429,19 @@ contract CelsiusxStrategy is
   function setWhitelistedCDO(address _cdo) external onlyOwner {
     require(_cdo != address(0), "IS_0");
     idleCDO = _cdo;
+  }
+
+  function setRouter(address _router) external onlyOwner {
+    require(_router != address(0), "IS_0");
+    quickRouter = IUniswapV2Router02(_router);
+  }
+
+  function setReleaseBlocksPeriod(uint256 _releaseBlocksPeriod)
+    external
+    onlyOwner
+  {
+    require(_releaseBlocksPeriod != 0, "IS_0");
+    releaseBlocksPeriod = _releaseBlocksPeriod;
   }
 
   /// @notice Modifier to make sure that caller os only the idleCDO contract

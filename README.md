@@ -1,39 +1,37 @@
-# Idle Foundry Template
-
-Based on https://github.com/libevm/forge-example
-
-with some minor modifications/additions to the solidity side such as `BaseTest.sol`
-
-## Overview
-
-- Uses [forge](https://github.com/gakonst/foundry) to compile, test, and debug.
-- Uses a custom JS script to deploy, see [deploy.js](https://github.com/libevm/forge-example/blob/main/scripts/deploy.js).
+# Quickswap  PYT
 
 ## Development
+### Getting Started
 
-Building and testing
+This repo is based on https://github.com/libevm/forge-example
+
+Install [forge](https://github.com/gakonst/foundry) to compile, test, and debug.
+
+To install dependencies type:
+
 ```bash
 forge install
-forge build
-forge test
 ```
 
-Other useful commands:
+To Build Type 
+```bash
+forge build
+```
 
-- forking from existing state
+### Test
+
+To run on forking network copy `.env.example` to `.env` and setup api key.
+Type:
+
 ```bash
 # -vvv = very very verbose
-forge test -f http://127.0.0.1:8545 -vvv
+forge test -f http://127.0.0.1:8545  --fork-block-number <FORK_BLOCK_NUMBER> -vvv
 ```
 
+###  Debugging
 - access the debugger
 ```bash
 forge run --debug src/test/Contract.t.sol --sig "testExample()"
-```
-
-- run test on a single contract
-```bash
-forge test --match-contract Test3
 ```
 
 ## Contract Deployment
