@@ -1,6 +1,7 @@
-# Quickswap  PYT
+# Quickswap PYT
 
 ## Development
+
 ### Getting Started
 
 This repo is based on https://github.com/libevm/forge-example
@@ -13,7 +14,8 @@ To install dependencies type:
 forge install
 ```
 
-To Build Type 
+To build Type:
+
 ```bash
 forge build
 ```
@@ -28,8 +30,10 @@ Type:
 forge test -f http://127.0.0.1:8545  --fork-block-number <FORK_BLOCK_NUMBER> -vvv
 ```
 
-###  Debugging
+### Debugging
+
 - access the debugger
+
 ```bash
 forge run --debug src/test/Contract.t.sol --sig "testExample()"
 ```

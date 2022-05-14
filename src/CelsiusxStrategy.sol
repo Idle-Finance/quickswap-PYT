@@ -11,7 +11,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
-import "forge-std/console2.sol";
+import "forge-std/console.sol";
 
 /// @author Idle Labs Inc.
 /// @title IdleLidoStrategy
@@ -223,11 +223,10 @@ contract CelsiusxStrategy is
     address _baseToken = baseToken;
     address _cxToken = cxToken;
 
-    // claim rewards
-    stakingRewards.getReward();
-
     // avold stack too deep error
     {
+      // claim rewards
+      stakingRewards.getReward();
       // swap wmatic rewards for each token of the pool
       uint256 wmaticAmount = IERC20(WMATIC).balanceOf(address(this));
       _swap(WMATIC, _baseToken, wmaticAmount / 2, amountOutMin);
@@ -265,7 +264,7 @@ contract CelsiusxStrategy is
     balances[3] = IERC20(DQUICK).balanceOf(address(this));
 
     // send DQuick rewards to msg.sender
-    IERC20(DQUICK).safeTransfer(msg.sender, balances[0]);
+    IERC20(DQUICK).safeTransfer(msg.sender, balances[3]);
   }
 
   /// @dev msg.sender should approve this contract first

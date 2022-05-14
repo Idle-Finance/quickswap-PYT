@@ -227,7 +227,7 @@ abstract contract IntegrationTest is Test {
       "strategy bal"
     );
 
-    skip(180 days); // Skip 180 day forward
+    skip(7 days); // Skip 7 day forward
     vm.roll(block.number + 1); // Set block.height (newHeight)
 
     idleCDO.withdrawAA(1e10);
@@ -247,56 +247,6 @@ abstract contract IntegrationTest is Test {
     assertGt(IERC20(WMATIC).balanceOf(address(strategy)), 0);
   }
 
-  // function testRedeemBB()
-  //   external
-  //   runOnForkingNetwork(POLYGON_MAINNET_CHIANID)
-  // {
-  //   idleCDO.depositBB(1e10);
-
-  //   // params
-  //   bool[] memory _skipFlags = new bool[](4);
-  //   bool[] memory _skipReward = new bool[](2);
-  //   uint256[] memory _minAmount = new uint256[](2);
-  //   uint256[] memory _sellAmounts = new uint256[](2);
-  //   bytes memory _extraData = abi.encode(uint256(0), uint256(0), uint256(0));
-  //   _skipFlags[3] = true;
-
-  //   vm.prank(rebalancer);
-  //   idleCDO.harvest(
-  //     _skipFlags,
-  //     _skipReward,
-  //     _minAmount,
-  //     _sellAmounts,
-  //     _extraData
-  //   );
-
-  //   uint256 unlentPerc = 2000;
-  //   uint256 unlentBal = (1e10 * unlentPerc) / FULL_ALLOC;
-  //   assertEq(
-  //     strategy.balanceOf(address(idleCDO)),
-  //     1e10 - unlentBal,
-  //     "strategy bal"
-  //   );
-
-  //   skip(180 days); // Skip 180 day forward
-  //   vm.roll(block.number + 1); // Set block.height (newHeight)
-
-  //   idleCDO.withdrawBB(1e10);
-
-  //   assertEq(IERC20(BBtranche).balanceOf(address(this)), 0, "BBtranche bal");
-  //   assertEq(
-  //     IERC20(underlying).balanceOf(address(this)),
-  //     1e10,
-  //     "underlying bal"
-  //   );
-  //   assertEq(strategy.balanceOf(address(this)), 0, "strategy bal");
-  //   assertEq(stakingRewards.balanceOf(address(strategy)), 0);
-
-  //   // get rewards
-  //   assertGt(IERC20(DQUICK).balanceOf(address(strategy)), 0);
-  //   assertGt(IERC20(WMATIC).balanceOf(address(strategy)), 0);
-  // }
-
   function testRedeemRewards()
     external
     runOnForkingNetwork(POLYGON_MAINNET_CHIANID)
@@ -309,7 +259,7 @@ abstract contract IntegrationTest is Test {
     uint256[] memory _minAmount = new uint256[](2);
     uint256[] memory _sellAmounts = new uint256[](2);
     bytes memory _extraData = abi.encode(uint256(0), uint256(0), uint256(0));
-    _skipFlags[3] = false;
+    _skipFlags[3] = true; // Deposit the remaining balance in the lending provider
 
     vm.prank(rebalancer);
     idleCDO.harvest(
@@ -320,15 +270,17 @@ abstract contract IntegrationTest is Test {
       _extraData
     );
 
-    skip(180 days); // Skip 180 day forward
+    skip(7 days); // Skip 7 day forward
     vm.roll(block.number + 1); // Set block.height (newHeight)
 
-    uint256 quickRewards = stakingRewards.earnedB(address(strategy));
+    uint256 quickRewards = stakingRewards.earnedA(address(strategy));
     uint256 _liquidityBefore = IUniswapV2Pair(underlying).balanceOf(
       address(stakingRewards)
     );
+    uint256 _stakingBal = stakingRewards.balanceOf(address(strategy));
     uint256 _totalSupply = strategy.totalSupply();
 
+    // redeem rewards
     vm.prank(owner);
     uint256[] memory balances = strategy.redeemRewards();
 
@@ -339,18 +291,18 @@ abstract contract IntegrationTest is Test {
     // balances
     assertEq(
       stakingRewards.balanceOf(address(strategy)),
-      1e10 + mintedLpTokens
+      _stakingBal + mintedLpTokens
     );
-    assertEq(strategy.totalLpTokensStaked(), 1e10 + mintedLpTokens);
+    assertEq(strategy.totalLpTokensStaked(), _stakingBal + mintedLpTokens);
 
     // invariants
     assertEq(strategy.totalSupply(), _totalSupply);
 
     // rewards
-    assertEq(balances.length, 2);
-    assertEq(balances[0], mintedLpTokens);
-    assertEq(balances[1], quickRewards);
-    assertGt(IERC20(DQUICK).balanceOf(owner), quickRewards);
+    assertEq(balances.length, 4);
+    assertEq(balances[2], mintedLpTokens);
+    assertEq(balances[3], quickRewards);
+    assertEq(IERC20(DQUICK).balanceOf(owner), quickRewards);
   }
 
   // function testHarvest() external runOnForkingNetwork(POLYGON_MAINNET_CHIANID) {
@@ -366,6 +318,9 @@ abstract contract IntegrationTest is Test {
 
   //   uint256 quickRewards = stakingRewards.earnedB(address(strategy));
   //   uint256 _totalSupply = strategy.totalSupply();
+  //   uint256 _liquidityBefore = IUniswapV2Pair(underlying).balanceOf(
+  //     address(stakingRewards)
+  //   );
 
   //   // params
   //   bool[] memory _skipFlags = new bool[](4);
@@ -373,36 +328,50 @@ abstract contract IntegrationTest is Test {
   //   uint256[] memory _minAmount = new uint256[](2);
   //   uint256[] memory _sellAmounts = new uint256[](2);
   //   bytes memory _extraData = abi.encode(uint256(0), uint256(0), uint256(0));
-  //   //  index 0 : wmatic
-  //   // _skipFlags[0] = false;
-  //   // _skipReward[0] = true;
-  //   // _minAmount[0] = 0;
-  //   // _sellAmounts[0] = 0;
+  //  index 0 : wmatic
+  // _skipFlags[0] = false;
+  // _skipReward[0] = true;
+  // _minAmount[0] = 0;
+  // _sellAmounts[0] = 0;
 
-  //   // index 0 : quick
-  //   _skipFlags[0] = true;
-  //   _skipReward[0] = true;
-  //   _minAmount[0] = 0;
-  //   _sellAmounts[0] = 0;
+  // // index 0 : quick
+  // _skipFlags[0] = true;
+  // _skipReward[0] = true;
+  // _minAmount[0] = 0;
+  // _sellAmounts[0] = 0;
 
-  //   vm.prank(rebalancer);
-  //   idleCDO.harvest(
-  //     _skipFlags,
-  //     _skipReward,
-  //     _minAmount,
-  //     _sellAmounts,
-  //     _extraData
-  //   );
+  // vm.prank(rebalancer);
+  // idleCDO.harvest(
+  //   _skipFlags,
+  //   _skipReward,
+  //   _minAmount,
+  //   _sellAmounts,
+  //   _extraData
+  // );
 
-  //   // balances
-  //   assertGt(stakingRewards.balanceOf(address(strategy)), 20e10);
-  //   assertGt(strategy.totalLpTokensStaked(), 20e10);
+  // uint256 mintedLpTokens = IUniswapV2Pair(underlying).balanceOf(
+  //   address(stakingRewards)
+  // ) - _liquidityBefore;
 
-  //   // invariants
-  //   assertEq(strategy.totalSupply(), _totalSupply);
+  // // balances
+  // assertEq(
+  //   stakingRewards.balanceOf(address(strategy)),
+  //   1e10 + mintedLpTokens
+  // );
+  // assertEq(strategy.totalLpTokensStaked(), 1e10 + mintedLpTokens);
 
-  //   // rewards
-  //   assertEq(IERC20(QUICK).balanceOf(address(idleCDO)), quickRewards);
+  // // invariants
+  // assertEq(strategy.totalSupply(), _totalSupply);
+
+  // // balances
+  // assertGt(stakingRewards.balanceOf(address(strategy)), 20e10);
+  // assertGt(strategy.totalLpTokensStaked(), 20e10);
+
+  // // invariants
+  // assertEq(strategy.totalSupply(), _totalSupply);
+
+  // // rewards
+  // assertEq(IERC20(QUICK).balanceOf(address(idleCDO)), quickRewards);
   // }
 
   // function testSetStrategy()
