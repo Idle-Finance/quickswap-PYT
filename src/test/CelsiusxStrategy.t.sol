@@ -55,7 +55,6 @@ contract CelsiusxStrategyTest is Test {
       .sig(strategy.token.selector)
       .checked_write(address(0));
     strategy.initialize(
-      address(strategy),
       underlying,
       baseToken,
       cxToken,
@@ -65,13 +64,13 @@ contract CelsiusxStrategyTest is Test {
     );
 
     // fund
-    deal(underlying, address(this), 1e10, true);
+    deal(underlying, address(this), 1e18, true);
 
     // set address(this) as idleCDO
     vm.prank(owner);
     strategy.setWhitelistedCDO(address(this));
 
-    IERC20(underlying).approve(address(strategy), ONE_SCALE);
+    IERC20(underlying).approve(address(strategy), 10e18);
 
     /// label
     vm.label(address(strategy), "strategy");
@@ -86,27 +85,28 @@ contract CelsiusxStrategyTest is Test {
     quick = address(new MockERC20("", ""));
     baseToken = address(new MockERC20("", ""));
     cxToken = address(new MockERC20("", ""));
+    uint256 _amount = 100000 * ONE_SCALE;
     // create pair
     address pair = IUniswapV2Factory(IUniswapV2Router02(router).factory())
       .createPair(baseToken, cxToken);
     underlying = pair;
 
     /// pool setup
-    deal(baseToken, pair, 100000 * ONE_SCALE, true);
-    deal(cxToken, pair, 100000 * ONE_SCALE, true);
+    deal(baseToken, pair, _amount, true);
+    deal(cxToken, pair, _amount, true);
     vm.prank(address(0xfeed));
     IUniswapV2Pair(pair).mint(address(this)); // add liquidity
 
     /// staking reward setup
     stakingRewards = new StakingDualRewards(owner, owner, wmatic, quick, pair);
-    deal(wmatic, address(stakingRewards), 100000 * ONE_SCALE, true);
-    deal(quick, address(stakingRewards), 100000 * ONE_SCALE, true);
+    _updateRewards(_amount, 1 weeks);
+  }
+
+  function _updateRewards(uint256 _amount, uint256 _time) internal {
+    deal(wmatic, address(stakingRewards), _amount, true);
+    deal(quick, address(stakingRewards), _amount, true);
     vm.prank(owner);
-    stakingRewards.notifyRewardAmount(
-      100000 * ONE_SCALE,
-      100000 * ONE_SCALE,
-      1 weeks
-    );
+    stakingRewards.notifyRewardAmount(_amount, _amount, _time);
   }
 
   function testInitialize()
@@ -115,7 +115,6 @@ contract CelsiusxStrategyTest is Test {
   {
     vm.expectRevert(bytes("Initializable: contract is already initialized"));
     strategy.initialize(
-      address(strategy),
       underlying,
       baseToken,
       cxToken,
@@ -130,6 +129,8 @@ contract CelsiusxStrategyTest is Test {
       string(abi.encodePacked("idleCS", IERC20Metadata(underlying).symbol()))
     );
     assertEq(strategy.tokenDecimals(), 18);
+    assertEq(strategy.baseToken(), baseToken);
+    assertEq(strategy.cxToken(), cxToken);
     assertEq(address(strategy.stakingRewards()), address(stakingRewards));
     assertEq(address(strategy.quickRouter()), router);
     assertEq(strategy.owner(), owner);
@@ -143,13 +144,13 @@ contract CelsiusxStrategyTest is Test {
     vm.startPrank(caller);
 
     vm.expectRevert(CelsiusxStrategy.CelsiusxStrategy_OnlyIdleCDO.selector);
-    strategy.deposit(1e10);
+    strategy.deposit(1e18);
 
     vm.expectRevert(CelsiusxStrategy.CelsiusxStrategy_OnlyIdleCDO.selector);
-    strategy.redeem(1e10);
+    strategy.redeem(1e18);
 
     vm.expectRevert(CelsiusxStrategy.CelsiusxStrategy_OnlyIdleCDO.selector);
-    strategy.redeemUnderlying(1e10);
+    strategy.redeemUnderlying(1e18);
 
     vm.expectRevert(CelsiusxStrategy.CelsiusxStrategy_OnlyIdleCDO.selector);
     strategy.redeemRewards(bytes(""));
@@ -161,13 +162,13 @@ contract CelsiusxStrategyTest is Test {
     external
     runOnForkingNetwork(POLYGON_MAINNET_CHIANID)
   {
-    deal(baseToken, address(strategy), 1e10);
+    deal(baseToken, address(strategy), 1e18);
     address caller = address(0xCAFE);
     vm.prank(caller);
 
     // sweep
     vm.expectRevert(bytes("Ownable: caller is not the owner"));
-    strategy.transferToken(baseToken, 1e10, caller);
+    strategy.transferToken(baseToken, 1e18, caller);
   }
 
   function testSweepTokens()
@@ -175,11 +176,11 @@ contract CelsiusxStrategyTest is Test {
     runOnForkingNetwork(POLYGON_MAINNET_CHIANID)
   {
     // fund
-    deal(baseToken, address(strategy), 1e10);
+    deal(baseToken, address(strategy), 1e18);
     // sweep
     vm.prank(owner);
-    strategy.transferToken(baseToken, 1e10, address(0xbabe));
-    assertEq(IERC20(baseToken).balanceOf(address(0xbabe)), 1e10);
+    strategy.transferToken(baseToken, 1e18, address(0xbabe));
+    assertEq(IERC20(baseToken).balanceOf(address(0xbabe)), 1e18);
   }
 
   function testSetWhiteListedCDO()
@@ -247,39 +248,50 @@ contract CelsiusxStrategyTest is Test {
   }
 
   function testDeposit() external runOnForkingNetwork(POLYGON_MAINNET_CHIANID) {
-    strategy.deposit(1e10);
-
+    assertEq(strategy.deposit(1e18), 1e18);
     assertEq(IERC20(underlying).balanceOf(address(this)), 0);
-    assertEq(strategy.balanceOf(address(this)), 1e10); // price is equal to 1e18 in underlying
-    assertEq(stakingRewards.balanceOf(address(strategy)), 1e10);
+    assertEq(strategy.balanceOf(address(this)), 1e18); // price is equal to 1e18 in underlying
+    assertEq(stakingRewards.balanceOf(address(strategy)), 1e18);
+    assertEq(strategy.totalLpTokensStaked(), 1e18);
+    // Check updated apr values 
+    assertEq(strategy.lastIndexedTime(), block.timestamp);
+    assertEq(strategy.lastIndexAmount(), 1e18);
+    assertEq(strategy.getApr(), 0);
   }
 
   function testRedeem() external runOnForkingNetwork(POLYGON_MAINNET_CHIANID) {
-    strategy.deposit(1e10);
+    strategy.deposit(1e18);
 
     skip(1 days); // Skip 1 day forward
 
-    strategy.redeem(1e10);
+    strategy.redeem(1e18);
 
-    assertEq(IERC20(underlying).balanceOf(address(this)), 1e10);
+    assertEq(IERC20(underlying).balanceOf(address(this)), 1e18);
     assertEq(strategy.balanceOf(address(this)), 0);
     assertEq(stakingRewards.balanceOf(address(strategy)), 0);
+    assertEq(strategy.totalLpTokensStaked(), 0);
+
     // get rewards
     assertGt(IERC20(wmatic).balanceOf(address(strategy)), 0);
     assertGt(IERC20(quick).balanceOf(address(strategy)), 0);
+
+    // Check updated apr values 
+    assertEq(strategy.lastIndexedTime(), block.timestamp);
+    assertEq(strategy.lastIndexAmount(), 0);
+    assertEq(strategy.getApr(), 0);
   }
 
   function testRedeemUnderlying()
     external
     runOnForkingNetwork(POLYGON_MAINNET_CHIANID)
   {
-    strategy.deposit(1e10);
+    strategy.deposit(1e18);
 
     skip(1 days); // Skip 1 day forward
 
-    strategy.redeemUnderlying(1e10);
+    strategy.redeemUnderlying(1e18);
 
-    assertEq(IERC20(underlying).balanceOf(address(this)), 1e10);
+    assertEq(IERC20(underlying).balanceOf(address(this)), 1e18);
     assertEq(strategy.balanceOf(address(this)), 0);
     assertEq(stakingRewards.balanceOf(address(strategy)), 0);
     // get rewards
@@ -287,16 +299,77 @@ contract CelsiusxStrategyTest is Test {
     assertGt(IERC20(quick).balanceOf(address(strategy)), 0);
   }
 
-  function testApr() external runOnForkingNetwork(POLYGON_MAINNET_CHIANID) {
-    strategy.deposit(1e10);
-    assertGt(strategy.getApr(), 0);
-  }
-
   function testPrice() external runOnForkingNetwork(POLYGON_MAINNET_CHIANID) {
     // total supply is equal to zero
     assertEq(strategy.price(), ONE_SCALE);
     // total Lp tokens loced is equal to zero
-    strategy.deposit(1e10);
+    strategy.deposit(1e18);
     assertEq(strategy.price(), ONE_SCALE);
+
+    uint256 halfUnlock = strategy.releaseBlocksPeriod() / 2;
+    // we simulate 1e18 new rewards (so totalLpTokensStaked is 2e10)
+    _simLockedRewards(1e18);
+    // price is still unchanged right after harvest
+    assertEq(strategy.price(), 1e18);
+    // increase block number
+    vm.roll(block.number + halfUnlock);
+    assertEq(strategy.price(), 1.5e18);
+    
+    vm.roll(block.number + halfUnlock);
+    assertEq(strategy.price(), 2e18);
+  }
+
+  function testApr() external runOnForkingNetwork(POLYGON_MAINNET_CHIANID) {
+    assertEq(strategy.getApr(), 0);
+    strategy.deposit(1e18);
+    assertEq(strategy.getApr(), 0);
+    // we got 1e18 underlying in 1 year so apy should be about 100%
+    skip(365 days);
+    _simLockedRewards(1e18);
+    vm.roll(block.number + strategy.releaseBlocksPeriod());
+
+    // check that apr is computed on deposits
+    deal(underlying, address(this), 1e18, true);
+    strategy.deposit(1e18);
+    assertEq(strategy.getApr(), 100e18);
+    
+    // check that apr is computed on redeems
+    // simulated 3 LP harvested after 1 year (with 3 LP already
+    // staked so apr should be 100% again)
+    skip(365 days);
+    _simLockedRewards(3e18);
+    vm.roll(block.number + strategy.releaseBlocksPeriod());
+    _updateRewards(200000e18, 1 weeks);
+    strategy.redeemUnderlying(1e18);
+    assertEq(strategy.getApr(), 100e18);
+  }
+
+  function _simLockedRewards(uint256 _amount) internal {
+    uint256 totStaked = stakingRewards.balanceOf(address(strategy)) + _amount;
+    // set _totStaked
+    stdstore
+      .target(address(strategy))
+      .sig(strategy.totalLpTokensStaked.selector)
+      .checked_write(totStaked);
+
+    // set stakingRewards balanceOf strategy for apr calculations
+    stdstore
+      .target(address(stakingRewards))
+      .sig(stakingRewards.balanceOf.selector)
+      .with_key(address(strategy))
+      .checked_write(totStaked);
+    deal(underlying, address(stakingRewards), totStaked, true);
+
+    // set latestHarvestBlock to curr block
+    stdstore
+      .target(address(strategy))
+      .sig(strategy.latestHarvestBlock.selector)
+      .checked_write(block.number);
+
+    // set totalLpTokensLocked
+    stdstore
+      .target(address(strategy))
+      .sig(strategy.totalLpTokensLocked.selector)
+      .checked_write(_amount);
   }
 }

@@ -11,8 +11,6 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
-import "forge-std/console.sol";
-
 /// @author Idle Labs Inc.
 /// @title IdleLidoStrategy
 /// @notice IIdleCDOStrategy to deploy funds in Idle Finance
@@ -46,15 +44,17 @@ contract CelsiusxStrategy is
   /// @notice decimals of the underlying asset
   uint256 public override tokenDecimals;
 
+  /// @notice LP base tokens (eg in wETH/cxETH the baseToken is wETH and cxToken is cxETH)
   address public baseToken;
-
   address public cxToken;
 
+  /// @notice Quickswap Staking rewards contract
   IStakingDualRewards public stakingRewards;
 
   /// @notice QuickSwap Router
   IUniswapV2Router02 public quickRouter;
 
+  /// @notice IdleCDO address
   address public idleCDO;
 
   /// @notice amount last indexed for calculating APR
@@ -99,11 +99,13 @@ contract CelsiusxStrategy is
 
   /// @notice can only be called once
   /// @dev Initialize the upgradable contract
-  /// @param _strategyToken address of the strategy token
   /// @param _underlyingToken address of LP token
+  /// @param _baseToken address of one the token in the LP pair
+  /// @param _cxToken address of the other token in the LP pair (Celsius tokenized version)
   /// @param _owner owner address
+  /// @param _stakingRewards address for getting Quickswap staking rewards
+  /// @param _router Uniswap-like router address
   function initialize(
-    address _strategyToken,
     address _underlyingToken,
     address _baseToken,
     address _cxToken,
@@ -122,7 +124,7 @@ contract CelsiusxStrategy is
       )
     );
     // Set basic parameters
-    strategyToken = _strategyToken;
+    strategyToken = address(this);
     token = _underlyingToken;
     baseToken = _baseToken;
     cxToken = _cxToken;
@@ -307,7 +309,6 @@ contract CelsiusxStrategy is
   /// @param _amount amount of underlying tokens to mint/redeem
   function _updateApr(int256 _amount) internal {
     uint256 lptStaked = stakingRewards.balanceOf(address(this));
-    // uint256 lptStaked = totalLpTokensStaked;
     uint256 _lastIndexAmount = lastIndexAmount;
     if (_lastIndexAmount != 0) {
       uint256 gainPerc = ((lptStaked - _lastIndexAmount) * 10**20) / _lastIndexAmount; // prettier-ignore
@@ -395,7 +396,7 @@ contract CelsiusxStrategy is
   /// @return tokens array of reward token addresses
   function getRewardTokens()
     external
-    view
+    pure
     override
     returns (address[] memory tokens)
   {

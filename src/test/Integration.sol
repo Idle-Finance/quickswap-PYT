@@ -64,7 +64,6 @@ abstract contract IntegrationTest is Test {
       .sig(strategy.token.selector)
       .checked_write(address(0));
     strategy.initialize(
-      address(strategy),
       underlying,
       baseToken,
       cxToken,
@@ -133,7 +132,6 @@ abstract contract IntegrationTest is Test {
   {
     vm.expectRevert(bytes("Initializable: contract is already initialized"));
     strategy.initialize(
-      address(strategy),
       underlying,
       baseToken,
       cxToken,

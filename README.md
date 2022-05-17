@@ -1,12 +1,14 @@
 # Quickswap PYT
 
+Idle PYT strategy https://github.com/Idle-Labs/idle-tranches for Quickswap on Polygon
+
 ## Development
 
 ### Getting Started
 
 This repo is based on https://github.com/libevm/forge-example
 
-Install [forge](https://github.com/gakonst/foundry) to compile, test, and debug.
+Install [foundry](https://github.com/gakonst/foundry) to compile, test, and debug.
 
 To install dependencies type:
 
