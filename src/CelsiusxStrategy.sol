@@ -4,8 +4,8 @@ pragma solidity 0.8.10;
 import "./interfaces/idle/IIdleCDOStrategy.sol";
 import "./interfaces/quickswap/IStakingDualRewards.sol";
 import "./interfaces/uniswapv2/IUniswapV2Router.sol";
+import "./interfaces/IERC20Full.sol";
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
@@ -120,7 +120,7 @@ contract CelsiusxStrategy is
     ERC20Upgradeable.__ERC20_init(
       "Idle Celsiusx Strategy Token",
       string(
-        abi.encodePacked("idleCS", IERC20MetadataUpgradeable(_underlyingToken).symbol())
+        abi.encodePacked("idleCS", IERC20Full(_underlyingToken).symbol())
       )
     );
     // Set basic parameters
@@ -131,7 +131,7 @@ contract CelsiusxStrategy is
     lastIndexedTime = block.timestamp;
     releaseBlocksPeriod = 6400;
 
-    tokenDecimals = IERC20MetadataUpgradeable(_underlyingToken).decimals();
+    tokenDecimals = IERC20Full(_underlyingToken).decimals();
     oneToken = 10**(tokenDecimals);
     if (oneToken != ONE_SCALE) revert CelsiusxStrategy_Decimals();
 
