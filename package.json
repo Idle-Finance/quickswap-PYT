@@ -1,4 +1,11 @@
 {
+  "name": "quickswap-PYT",
+  "version": "0.0.1",
+  "description": "Idle Finance Quickswap strategy for PYT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Idle-Finance/quickswap-PYT"
+  },
   "dependencies": {
     "@ethersproject/hardware-wallets": "^5.6.0",
     "chalk": "^5.0.1",
