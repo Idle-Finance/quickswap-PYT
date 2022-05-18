@@ -5,8 +5,8 @@ import "./interfaces/idle/IIdleCDOStrategy.sol";
 import "./interfaces/quickswap/IStakingDualRewards.sol";
 import "./interfaces/uniswapv2/IUniswapV2Router.sol";
 
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
@@ -23,7 +23,7 @@ contract CelsiusxStrategy is
   ERC20Upgradeable,
   IIdleCDOStrategy
 {
-  using SafeERC20 for IERC20;
+  using SafeERC20Upgradeable for IERC20Upgradeable;
 
   uint256 private constant ONE_SCALE = 1e18;
   /// @notice one year, used to calculate the APR
@@ -120,7 +120,7 @@ contract CelsiusxStrategy is
     ERC20Upgradeable.__ERC20_init(
       "Idle Celsiusx Strategy Token",
       string(
-        abi.encodePacked("idleCS", IERC20Metadata(_underlyingToken).symbol())
+        abi.encodePacked("idleCS", IERC20MetadataUpgradeable(_underlyingToken).symbol())
       )
     );
     // Set basic parameters
@@ -131,14 +131,14 @@ contract CelsiusxStrategy is
     lastIndexedTime = block.timestamp;
     releaseBlocksPeriod = 6400;
 
-    tokenDecimals = IERC20Metadata(_underlyingToken).decimals();
+    tokenDecimals = IERC20MetadataUpgradeable(_underlyingToken).decimals();
     oneToken = 10**(tokenDecimals);
     if (oneToken != ONE_SCALE) revert CelsiusxStrategy_Decimals();
 
     stakingRewards = IStakingDualRewards(_stakingRewards);
     quickRouter = IUniswapV2Router02(_router);
 
-    IERC20(_underlyingToken).safeApprove(_stakingRewards, type(uint256).max);
+    IERC20Upgradeable(_underlyingToken).safeApprove(_stakingRewards, type(uint256).max);
 
     // transfer ownership
     transferOwnership(_owner);
@@ -158,7 +158,7 @@ contract CelsiusxStrategy is
     returns (uint256 shares)
   {
     if (_amount != 0) {
-      IERC20(token).safeTransferFrom(msg.sender, address(this), _amount);
+      IERC20Upgradeable(token).safeTransferFrom(msg.sender, address(this), _amount);
       // deposit to a staking contract
       shares = _deposit(_amount);
       // mint shares
@@ -231,13 +231,13 @@ contract CelsiusxStrategy is
       // claim rewards
       stakingRewards.getReward();
       // swap wmatic rewards for each token of the pool
-      uint256 wmaticAmount = IERC20(WMATIC).balanceOf(address(this));
+      uint256 wmaticAmount = IERC20Upgradeable(WMATIC).balanceOf(address(this));
       _swap(WMATIC, _baseToken, wmaticAmount / 2, amountOutMin);
       _swap(WMATIC, _cxToken, wmaticAmount / 2, amountOutMin);
     }
     // get each balances
-    uint256 amountBaseToken = IERC20(_baseToken).balanceOf(address(this));
-    uint256 amountCxToken = IERC20(_cxToken).balanceOf(address(this));
+    uint256 amountBaseToken = IERC20Upgradeable(_baseToken).balanceOf(address(this));
+    uint256 amountCxToken = IERC20Upgradeable(_cxToken).balanceOf(address(this));
 
     // add liquidity and mint Lp tokens
     _approveToken(_baseToken, address(_router), amountBaseToken);
@@ -267,10 +267,10 @@ contract CelsiusxStrategy is
     balances[0] = amountBaseToken;
     balances[1] = amountCxToken;
     balances[2] = mintedLpTokens;
-    balances[3] = IERC20(DQUICK).balanceOf(address(this));
+    balances[3] = IERC20Upgradeable(DQUICK).balanceOf(address(this));
 
     // send DQuick rewards to msg.sender
-    IERC20(DQUICK).safeTransfer(msg.sender, balances[3]);
+    IERC20Upgradeable(DQUICK).safeTransfer(msg.sender, balances[3]);
   }
 
   /// @dev msg.sender should approve this contract first
@@ -305,7 +305,7 @@ contract CelsiusxStrategy is
       stakingRewards.withdraw(redeemed);
       stakingRewards.getReward();
 
-      IERC20(token).safeTransfer(msg.sender, redeemed);
+      IERC20Upgradeable(token).safeTransfer(msg.sender, redeemed);
     }
   }
 
@@ -427,7 +427,7 @@ contract CelsiusxStrategy is
     uint256 value,
     address _to
   ) external onlyOwner nonReentrant {
-    IERC20(_token).safeTransfer(_to, value);
+    IERC20Upgradeable(_token).safeTransfer(_to, value);
   }
 
   /// @notice allow to update address whitelisted to pull stkAAVE rewards
@@ -460,7 +460,7 @@ contract CelsiusxStrategy is
     address _spender,
     uint256 _allowance
   ) internal {
-    IERC20(_token).safeApprove(_spender, 0);
-    IERC20(_token).safeApprove(_spender, _allowance);
+    IERC20Upgradeable(_token).safeApprove(_spender, 0);
+    IERC20Upgradeable(_token).safeApprove(_spender, _allowance);
   }
 }
