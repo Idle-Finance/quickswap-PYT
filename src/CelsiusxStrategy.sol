@@ -67,7 +67,7 @@ contract CelsiusxStrategy is
   uint256 internal lastApr;
 
   /// @notice harvested tokens release delay
-  uint256 public releaseBlocksPeriod = 6400; // ~24 hours
+  uint256 public releaseBlocksPeriod; // ~24 hours
 
   /// @notice latest harvest
   uint256 public latestHarvestBlock;
@@ -129,6 +129,7 @@ contract CelsiusxStrategy is
     baseToken = _baseToken;
     cxToken = _cxToken;
     lastIndexedTime = block.timestamp;
+    releaseBlocksPeriod = 6400;
 
     tokenDecimals = IERC20Metadata(_underlyingToken).decimals();
     oneToken = 10**(tokenDecimals);
