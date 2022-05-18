@@ -252,8 +252,11 @@ contract CelsiusxStrategy is
       block.timestamp
     );
 
-    // deposit the minted lp tokens to a staking contract
-    _deposit(mintedLpTokens);
+    // deposit the minted lp tokens to the staking contract
+    stakingRewards.stake(mintedLpTokens);
+    totalLpTokensStaked += mintedLpTokens;
+    // update the apr after staking 
+    _updateApr(int256(mintedLpTokens));
 
     // save the block in which rewards are swapped and the amount
     latestHarvestBlock = block.number;
@@ -305,12 +308,13 @@ contract CelsiusxStrategy is
     }
   }
 
-  /// @notice update last saved apr
+  /// @notice update accounting for last saved apr
   /// @param _amount amount of underlying tokens to mint/redeem
   function _updateApr(int256 _amount) internal {
     uint256 lptStaked = stakingRewards.balanceOf(address(this));
     uint256 _lastIndexAmount = lastIndexAmount;
-    if (_lastIndexAmount != 0) {
+    // This will be valid only for redeemRewards
+    if (lptStaked > _lastIndexAmount) {
       uint256 gainPerc = ((lptStaked - _lastIndexAmount) * 10**20) / _lastIndexAmount; // prettier-ignore
       lastApr = (YEAR / (block.timestamp - lastIndexedTime)) * gainPerc;
     }
