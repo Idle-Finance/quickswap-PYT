@@ -167,8 +167,6 @@ contract CelsiusxStrategy is
   }
 
   function _deposit(uint256 _amount) internal returns (uint256 shares) {
-    _updateApr(int256(_amount));
-
     stakingRewards.stake(_amount);
 
     shares = (_amount * ONE_SCALE) / price();
@@ -254,14 +252,16 @@ contract CelsiusxStrategy is
     );
 
     // deposit the minted lp tokens to the staking contract
-    stakingRewards.stake(mintedLpTokens);
-    totalLpTokensStaked += mintedLpTokens;
-    // update the apr after staking 
-    _updateApr(int256(mintedLpTokens));
+    if (mintedLpTokens > 0) {
+      stakingRewards.stake(mintedLpTokens);
+      totalLpTokensStaked += mintedLpTokens;
+      // update the apr after staking 
+      _updateApr(mintedLpTokens);
 
-    // save the block in which rewards are swapped and the amount
-    latestHarvestBlock = block.number;
-    totalLpTokensLocked = mintedLpTokens;
+      // save the block in which rewards are swapped and the amount
+      latestHarvestBlock = block.number;
+      totalLpTokensLocked = mintedLpTokens;
+    }
 
     balances = new uint256[](4);
     balances[0] = amountBaseToken;
@@ -296,8 +296,6 @@ contract CelsiusxStrategy is
   function _redeem(uint256 _shares) internal returns (uint256 redeemed) {
     if (_shares != 0) {
       redeemed = (_shares * price()) / ONE_SCALE;
-      _updateApr(-int256(redeemed));
-
       _burn(msg.sender, _shares);
 
       totalLpTokensStaked -= redeemed;
@@ -310,17 +308,11 @@ contract CelsiusxStrategy is
   }
 
   /// @notice update accounting for last saved apr
-  /// @param _amount amount of underlying tokens to mint/redeem
-  function _updateApr(int256 _amount) internal {
-    uint256 lptStaked = stakingRewards.balanceOf(address(this));
-    uint256 _lastIndexAmount = lastIndexAmount;
-    // This will be valid only for redeemRewards
-    if (lptStaked > _lastIndexAmount) {
-      uint256 gainPerc = ((lptStaked - _lastIndexAmount) * 10**20) / _lastIndexAmount; // prettier-ignore
-      lastApr = (YEAR / (block.timestamp - lastIndexedTime)) * gainPerc;
-    }
+  /// @param _gain amount of underlying LP tokens gained in harvest
+  function _updateApr(uint256 _gain) internal {
+    uint256 priceIncrease = (_gain * ONE_SCALE) / totalSupply();
+    lastApr = priceIncrease * (YEAR / (block.timestamp - lastIndexedTime)) * 100;
     lastIndexedTime = block.timestamp;
-    lastIndexAmount = uint256(int256(lptStaked) + _amount);
   }
 
   /// @notice Function to swap tokens on uniswapV2-fork DEX

@@ -72,6 +72,8 @@ contract CelsiusxStrategyTest is Test {
 
     IERC20(underlying).approve(address(strategy), 10e18);
 
+    skip(1 days);
+
     /// label
     vm.label(address(strategy), "strategy");
     vm.label(underlying, "underlying");
@@ -253,10 +255,6 @@ contract CelsiusxStrategyTest is Test {
     assertEq(strategy.balanceOf(address(this)), 1e18); // price is equal to 1e18 in underlying
     assertEq(stakingRewards.balanceOf(address(strategy)), 1e18);
     assertEq(strategy.totalLpTokensStaked(), 1e18);
-    // Check updated apr values 
-    assertEq(strategy.lastIndexedTime(), block.timestamp);
-    assertEq(strategy.lastIndexAmount(), 1e18);
-    assertEq(strategy.getApr(), 0);
   }
 
   function testRedeem() external runOnForkingNetwork(POLYGON_MAINNET_CHIANID) {
@@ -274,11 +272,6 @@ contract CelsiusxStrategyTest is Test {
     // get rewards
     assertGt(IERC20(wmatic).balanceOf(address(strategy)), 0);
     assertGt(IERC20(quick).balanceOf(address(strategy)), 0);
-
-    // Check updated apr values 
-    assertEq(strategy.lastIndexedTime(), block.timestamp);
-    assertEq(strategy.lastIndexAmount(), 0);
-    assertEq(strategy.getApr(), 0);
   }
 
   function testRedeemUnderlying()
@@ -317,31 +310,6 @@ contract CelsiusxStrategyTest is Test {
     
     vm.roll(block.number + halfUnlock);
     assertEq(strategy.price(), 2e18);
-  }
-
-  function testApr() external runOnForkingNetwork(POLYGON_MAINNET_CHIANID) {
-    assertEq(strategy.getApr(), 0);
-    strategy.deposit(1e18);
-    assertEq(strategy.getApr(), 0);
-    // we got 1e18 underlying in 1 year so apy should be about 100%
-    skip(365 days);
-    _simLockedRewards(1e18);
-    vm.roll(block.number + strategy.releaseBlocksPeriod());
-
-    // check that apr is computed on deposits
-    deal(underlying, address(this), 1e18, true);
-    strategy.deposit(1e18);
-    assertEq(strategy.getApr(), 100e18);
-    
-    // check that apr is computed on redeems
-    // simulated 3 LP harvested after 1 year (with 3 LP already
-    // staked so apr should be 100% again)
-    skip(365 days);
-    _simLockedRewards(3e18);
-    vm.roll(block.number + strategy.releaseBlocksPeriod());
-    _updateRewards(200000e18, 1 weeks);
-    strategy.redeemUnderlying(1e18);
-    assertEq(strategy.getApr(), 100e18);
   }
 
   function _simLockedRewards(uint256 _amount) internal {

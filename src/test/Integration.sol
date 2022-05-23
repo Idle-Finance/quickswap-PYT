@@ -266,7 +266,7 @@ abstract contract IntegrationTest is Test {
     vm.roll(block.number + strategy.releaseBlocksPeriod());
     // minted in 1 year for 100 LP so the apr is basically the minted LP tokens
     uint256 mintedLP = balances[2]; 
-    assertEq(strategy.getApr(), mintedLP);
+    assertApproxEqAbs(strategy.getApr(), mintedLP , 100);
   }
 
   function _cdoHarvest() internal {
